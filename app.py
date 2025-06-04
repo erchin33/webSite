@@ -14,19 +14,17 @@ load_dotenv(override=True)  # Force reload of environment variables
 print(f"Current working directory: {os.getcwd()}")
 print(f".env file exists: {os.path.exists('.env')}")
 
-# Get API key and verify it exists
-api_key = os.getenv('OPENAI_API_KEY')
-print(f"API Key loaded (first 8 chars): {api_key[:8] if api_key else 'None'}")
-
-if not api_key:
+# Get OpenAI API key and verify it exists
+openai_api_key = os.getenv("OPENAI_API_KEY")
+if not openai_api_key:
     raise ValueError("No OpenAI API key found. Please set OPENAI_API_KEY in .env file")
 
 app = Flask(__name__, static_folder='client/build')
 CORS(app)
 
-# Initialize OpenAI client with explicit API key
+# Initialize OpenAI client
 client = OpenAI(
-    api_key=api_key,
+    api_key=openai_api_key,
     base_url="https://api.openai.com/v1"  # Explicitly set the base URL
 )
 
@@ -139,9 +137,22 @@ def get_ai_response(message=None, image_data=None):
         training_data_instruction = rules_to_use[1] if len(rules_to_use) > 1 else ""
         numbered_rules_content = rules_to_use[2:] if len(rules_to_use) > 2 else []
 
+        # Ürün görseli formatını düzenle
+        product_format = """Her ürün bilgisi için aşağıdaki formatı kullan:
+   📌 [Ürün Adı] Hakkında Bilgi
+   🟢 Ürün Adı: [Ürün adı]
+   🧪 İçerik: [Ürün içeriği]
+   💊 Kullanım Şekli: [Ürün üzerindeki talimatlar veya genel kullanım bilgisi]
+   💡 İlgili Olabilecek Alanlar (Rapora Göre): [Rapordaki hangi veriye dayanarak bu ürünün ilgili olabileceği bilgisini belirt]
+
+   ⚠️ Önemli Notlar:
+   Bu bilgi tedavi amaçlı değil, destekleyici amaçlıdır.
+   Kullanmadan önce doktorunuza danışın.
+   İlaç kullanıyorsanız veya kronik hastalığınız varsa mutlaka hekiminize danışın."""
+
         rules_text = "\n".join([f"{i+1}. {rule}" for i, rule in enumerate(numbered_rules_content)])
 
-        system_message_content = f"""{system_intro_part}\n\n{training_data_instruction}\n\nKişilik: {training_data['personality']}\nDav davranış Kuralları: {training_data['behavior']}\nYanıt Stili: {training_data['responseStyle']}\n\nKurallar:\n{rules_text}\n\nÜrünler:\n{json.dumps(products, indent=2, ensure_ascii=False)}
+        system_message_content = f"""{system_intro_part}\n\n{training_data_instruction}\n\nKişilik: {training_data['personality']}\nDavranış Kuralları: {training_data['behavior']}\nYanıt Stili: {training_data['responseStyle']}\n\nKurallar:\n{rules_text}\n\nÜrün Formatı:\n{product_format}\n\nÜrünler:\n{json.dumps(products, indent=2, ensure_ascii=False)}
 """
 
         messages = [
@@ -169,10 +180,31 @@ def get_ai_response(message=None, image_data=None):
                 ]
             })
         elif message:
-            messages.append({
-                "role": "user",
-                "content": message
-            })
+            # Eğer mesajda ürün görseli varsa, onu da ekle
+            if "Ürün Görseli:" in message:
+                # Mesajı ve görseli ayır
+                text_part, image_url = message.split("Ürün Görseli:")
+                messages.append({
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": text_part.strip()
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": image_url.strip(),
+                                "detail": "high"
+                            }
+                        }
+                    ]
+                })
+            else:
+                messages.append({
+                    "role": "user",
+                    "content": message
+                })
 
         try:
             response = client.chat.completions.create(
@@ -183,10 +215,12 @@ def get_ai_response(message=None, image_data=None):
             return response.choices[0].message.content
         except Exception as api_error:
             print(f"OpenAI API Error: {str(api_error)}")
+            print(f"Full error details: {api_error.__dict__}")
             return f"API Hatası: {str(api_error)}"
 
     except Exception as e:
         print(f"Error in get_ai_response: {str(e)}")
+        print(f"Full error details: {e.__dict__}")
         return "Üzgünüm, bir hata oluştu. Lütfen tekrar deneyin."
 
 @app.route('/api/products', methods=['GET'])
@@ -367,26 +401,20 @@ def chat():
 
         response = get_ai_response(message, image_data)
         return jsonify({"message": response})
-
     except Exception as e:
         print(f"Error in chat endpoint: {str(e)}")
         return jsonify({"message": "Üzgünüm, bir hata oluştu. Lütfen tekrar deneyin."})
 
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-def serve(path):
-    if path.startswith('api/'):
-        # API rotaları artık doğrudan tanımlı
-        pass
-    elif path != "" and os.path.exists(app.static_folder + '/' + path):
-        return send_from_directory(app.static_folder, path)
-    else:
-        # React uygulamasını serve et
-        return send_from_directory(app.static_folder, 'index.html')
+@app.route('/')
+def serve():
+    return send_from_directory(app.static_folder, 'index.html')
 
-# handle_api_request fonksiyonu artık kullanılmıyor
-# def handle_api_request(endpoint):
-#     pass
+@app.route('/<path:path>')
+def catch_all(path):
+    try:
+        return send_from_directory(app.static_folder, path)
+    except:
+        return send_from_directory(app.static_folder, 'index.html')
 
 if __name__ == '__main__':
     app.run(debug=True) 
