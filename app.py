@@ -6,13 +6,27 @@ from dotenv import load_dotenv
 import base64
 
 # Load environment variables from .env file
-load_dotenv()
+load_dotenv(override=True)  # Force reload of environment variables
+
+# Debug: Print current working directory and .env file existence
+print(f"Current working directory: {os.getcwd()}")
+print(f".env file exists: {os.path.exists('.env')}")
+
+# Get API key and verify it exists
+api_key = os.getenv('OPENAI_API_KEY')
+print(f"API Key loaded (first 8 chars): {api_key[:8] if api_key else 'None'}")
+
+if not api_key:
+    raise ValueError("No OpenAI API key found. Please set OPENAI_API_KEY in .env file")
 
 app = Flask(__name__, static_folder='client/build')
 CORS(app)
 
-# Initialize OpenAI client with API key from environment variable
-client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+# Initialize OpenAI client with explicit API key
+client = OpenAI(
+    api_key=api_key,
+    base_url="https://api.openai.com/v1"  # Explicitly set the base URL
+)
 
 def get_ai_response(message=None, image_data=None):
     try:
@@ -59,16 +73,21 @@ Kurallar:
                 "content": message
             })
 
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=messages,
-            max_tokens=800
-        )
-
-        return response.choices[0].message.content
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4o",  # Güncellenmiş model
+                messages=messages,
+                max_tokens=800
+            )
+            return response.choices[0].message.content
+        except Exception as api_error:
+            print(f"OpenAI API Error: {str(api_error)}")
+            print(f"Full error details: {api_error.__dict__}")
+            return f"API Hatası: {str(api_error)}"
 
     except Exception as e:
         print(f"Error in get_ai_response: {str(e)}")
+        print(f"Full error details: {e.__dict__}")
         return "Üzgünüm, bir hata oluştu. Lütfen tekrar deneyin."
 
 @app.route('/', defaults={'path': ''})
