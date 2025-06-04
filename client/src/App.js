@@ -1,4 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Home from './pages/Home';
+import Admin from './pages/Admin';
 import './App.css';
 
 function App() {
@@ -66,62 +69,15 @@ function App() {
   };
 
   return (
-    <div className="app">
-      <div className="chat-container">
-        <header className="chat-header">
-          <h1>Sağlık Takviyesi Danışmanı</h1>
-        </header>
-
-        <div className="messages-container">
-          {messages.map((message, index) => (
-            <div
-              key={index}
-              className={`message ${message.isUser ? 'user-message' : 'bot-message'} fade-in`}
-            >
-              {message.text}
-            </div>
-          ))}
-          {isLoading && (
-            <div className="loading-message">
-              <div className="loading-spinner"></div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-
-        <div className="upload-area" onClick={() => fileInputRef.current?.click()}>
-          <p>Tıbbi raporunuzu yüklemek için tıklayın veya sürükleyin</p>
-          <small>(Desteklenen formatlar: JPG, PNG)</small>
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleImageUpload}
-            accept="image/*"
-            style={{ display: 'none' }}
-          />
-        </div>
-
-        {selectedImage && (
-          <div className="image-preview">
-            <img src={selectedImage} alt="Preview" />
-            <button onClick={() => setSelectedImage(null)}>Kaldır</button>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="input-form">
-          <input
-            type="text"
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            placeholder="Mesajınızı yazın..."
-            className="message-input"
-          />
-          <button type="submit" className="send-button" disabled={isLoading}>
-            Gönder
-          </button>
-        </form>
+    <Router>
+      <div className="App">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </div>
-    </div>
+    </Router>
   );
 }
 
