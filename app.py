@@ -1,15 +1,17 @@
 from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
 import os
 from openai import OpenAI
 from dotenv import load_dotenv
 import base64
 
-# Load environment variables
+# Load environment variables from .env file
 load_dotenv()
 
 app = Flask(__name__, static_folder='client/build')
+CORS(app)
 
-# Initialize OpenAI client
+# Initialize OpenAI client with API key from environment variable
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 def get_ai_response(message=None, image_data=None):
