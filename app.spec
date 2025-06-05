@@ -8,7 +8,6 @@ a = Analysis(
     binaries=[],
     datas=[
         ('templates', 'templates'),
-        ('data', 'data'),
         ('client/build', 'client/build'),
         ('.env', '.'),
     ],
