@@ -9,6 +9,7 @@
         body {
             background-color: #f8f9fa;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding-bottom: 60px !important; /* AI disclaimer için alt boşluk */
         }
         .chat-container {
             max-width: 800px;
@@ -70,6 +71,22 @@
         .upload-area:hover {
             border-color: #007bff;
         }
+        .ai-disclaimer {
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            background-color: #f8f9fa !important;
+            border-top: 1px solid #dee2e6 !important;
+            padding: 1rem !important;
+            text-align: center !important;
+            font-size: 1rem !important;
+            color: #495057 !important;
+            z-index: 9999 !important;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1) !important;
+            display: block !important; /* Görünürlüğü sağlamak için eklendi */
+            box-sizing: border-box !important; /* Kutu modelini belirle */
+        }
     </style>
 </head>
 <body>
@@ -97,6 +114,10 @@
                 <button class="btn btn-primary" onclick="sendMessage()">Gönder</button>
             </div>
         </div>
+    </div>
+
+    <div class="ai-disclaimer">
+        🤖 Bu yapay zeka bilgi amaçlıdır, tavsiye etmez. Lütfen hekiminize danışın.
     </div>
 
     <script>
